@@ -12,9 +12,15 @@
   "app": {
     "windows": [
       {
-        "title": "wispr-flow-clone",
-        "width": 800,
-        "height": 600
+        "title": "Wispr Flow",
+        "width": 400,
+        "height": 280,
+        "resizable": false,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": false,
+        "shadow": false
       }
     ],
     "security": {

@@ -2,16 +2,608 @@
 @tailwind components;
 @tailwind utilities;
 
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
+/**
+ * Root Styles
+ * Transparent background for the floating widget effect.
+ * pointer-events: none on html/body allows click-through on Windows.
+ */
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   background: transparent;
 }
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  pointer-events: none;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+
+#root {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  pointer-events: none;
+  height: 100vh;
+}
+
+/**
+ * Floating Container
+ * Main wrapper that positions content at bottom center.
+ * pointer-events: none allows clicks to pass through transparent areas.
+ */
+.floating-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100vh;
+  padding: 8px 8px 40px 8px; 
+  box-sizing: border-box;
+  background: transparent;
+  pointer-events: none;
+}
+
+/**
+ * Transcription Bubble
+ * Dynamic bubble that appears above the mic button.
+ * pointer-events: auto to make it clickable.
+ */
+.transcription-bubble {
+  position: relative;
+  max-width: 320px;
+  min-width: 100px;
+  max-height: 180px;
+  margin-bottom: 10px;
+  padding: 10px 30px 10px 14px; 
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 14px;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  animation: bubble-in 0.2s ease-out;
+  pointer-events: auto;
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/**
+ * Transcription Content
+ * Scrollable area for the transcribed text.
+ */
+.transcription-content {
+  max-height: 140px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.transcription-text {
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 13px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.transcription-placeholder {
+  margin: 0;
+  color: #888;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/**
+ * Dismiss Button
+ * Small X button in top-right of bubble.
+ */
+.dismiss-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.06);
+  border: none;
+  border-radius: 50%;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dismiss-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #333;
+}
+
+/**
+ * Recording Indicator
+ * Pulsing dot shown while recording.
+ */
+.recording-indicator {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+}
+
+.pulse-dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+/**
+ * Error Tooltip
+ * Small error message above controls.
+ * pointer-events: auto to make it interactive.
+ */
+.error-tooltip {
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  background: rgba(239, 68, 68, 0.95);
+  color: white;
+  font-size: 12px;
+  border-radius: 8px;
+  animation: bubble-in 0.2s ease-out;
+  pointer-events: auto;
+}
+
+/**
+ * Copied Notification
+ * Small notification when auto-copy completes.
+ */
+.copied-notification {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 8px 14px;
+  background: rgba(34, 197, 94, 0.95);
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 8px;
+  animation: bubble-in 0.2s ease-out;
+  pointer-events: auto;
+}
+
+/**
+ * Control Bar
+ * Minimal container for mic and action buttons.
+ * pointer-events: auto to make buttons clickable.
+ */
+.control-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+/**
+ * Drag Handle
+ * Small grip icon to drag the widget around.
+ */
+.drag-handle {
+  width: 20px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 30, 30, 0.6);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: grab;
+  transition: all 0.15s ease;
+}
+
+.drag-handle:hover {
+  background: rgba(30, 30, 30, 0.8);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/**
+ * Mic Button
+ * Primary recording toggle - small and minimal.
+ */
+.mic-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 30, 30, 0.85);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.mic-btn:hover {
+  transform: scale(1.08);
+  background: rgba(40, 40, 40, 0.9);
+}
+
+.mic-btn:active {
+  transform: scale(0.95);
+}
+
+.mic-btn.recording {
+  background: rgba(239, 68, 68, 0.9);
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.5);
+  animation: recording-pulse 2s ease-in-out infinite;
+}
+
+.mic-btn.connecting {
+  background: rgba(245, 158, 11, 0.9);
+  cursor: wait;
+}
+
+@keyframes recording-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(239, 68, 68, 0.6);
+  }
+}
+
+/**
+ * Action Button
+ * Secondary buttons (copy) - minimal style matching mic.
+ */
+.action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 30, 30, 0.85);
+  border: none;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.action-btn:hover {
+  background: rgba(40, 40, 40, 0.9);
+  transform: scale(1.08);
+}
+
+.action-btn:active {
+  transform: scale(0.92);
+}
+
+.copy-btn.copied {
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
+}
+
+/**
+ * Custom Scrollbar
+ * Minimal scrollbar for transcription area.
+ */
+.transcription-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.transcription-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.transcription-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}
+
+.transcription-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/**
+ * Settings Button
+ * Gear icon to open settings panel.
+ */
+.settings-btn {
+  opacity: 0.6;
+}
+
+.settings-btn:hover {
+  opacity: 1;
+}
+
+/**
+ * Wake Word Active Indicator
+ * Subtle glow when wake word detection is active.
+ */
+.mic-btn.wake-word-active {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/**
+ * Settings Panel
+ * Overlay panel for app configuration.
+ * Positioned above the control bar with proper scrolling.
+ */
+.settings-panel {
+  position: fixed;
+  top: 10px;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 340px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: slide-up 0.2s ease-out;
+  pointer-events: auto;
+  z-index: 100;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.settings-close-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.08);
+  border: none;
+  border-radius: 8px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.settings-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.settings-content {
+  padding: 12px 0 16px;
+  max-height: 250px;
+  overflow-y: scroll;
+}
+
+/* Scrollbar for settings content */
+.settings-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.settings-section {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.settings-icon {
+  color: #666;
+  font-size: 14px;
+}
+
+.settings-sub {
+  margin-top: 10px;
+  padding-left: 24px;
+}
+
+.settings-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #888;
+}
+
+.settings-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+  color: #333;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.settings-input:focus {
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.settings-select {
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+}
+
+/**
+ * Toggle Switch
+ * iOS-style toggle for boolean settings.
+ */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.2s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggle input:checked + .toggle-slider {
+  background-color: #3b82f6;
+}
+
+.toggle input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+/**
+ * Shortcut Button
+ * Button to display and record keyboard shortcuts.
+ */
+.shortcut-btn {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-family: monospace;
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.shortcut-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.shortcut-btn.recording {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3b82f6;
+  animation: pulse-border 1s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    border-color: rgba(59, 130, 246, 0.6);
+  }
 }

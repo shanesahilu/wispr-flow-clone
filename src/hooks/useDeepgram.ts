@@ -13,6 +13,7 @@ type DeepgramConnectionState = "closed" | "connecting" | "connected" | "error";
 interface UseDeepgramReturn {
   connectToDeepgram: () => Promise<void>;
   disconnectFromDeepgram: () => void;
+  resetTranscript: () => void;
   connectionState: DeepgramConnectionState;
   realtimeTranscript: string;
   sendAudio: (data: Blob) => void;
@@ -154,9 +155,19 @@ export function useDeepgram(apiKey: string): UseDeepgramReturn {
     }
   }, []);
 
+  /**
+   * Function: resetTranscript
+   * Responsibility: Clears the accumulated transcript.
+   * Called when starting a new recording session.
+   */
+  const resetTranscript = useCallback(() => {
+    setRealtimeTranscript("");
+  }, []);
+
   return {
     connectToDeepgram,
     disconnectFromDeepgram,
+    resetTranscript,
     connectionState,
     realtimeTranscript,
     sendAudio,

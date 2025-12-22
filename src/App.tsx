@@ -1,129 +1,219 @@
-import { useState, useCallback, useEffect } from "react";
-import { TranscriptionView } from "./components/TranscriptionView";
-import { Controls } from "./components/Controls";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { FloatingWidget } from "./components/FloatingWidget";
+import { Settings } from "./components/Settings";
 import { useAudioRecorder } from "./hooks/useAudioRecorder";
 import { useDeepgram } from "./hooks/useDeepgram";
+import { useSettings } from "./hooks/useSettings";
+import { useGlobalShortcut } from "./hooks/useGlobalShortcut";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 function App() {
   /**
    * State: transcription
-   * Holds the final text to be displayed in the UI.
-   * It syncs with the data coming from useDeepgram.
+   * Holds the final text to be displayed in the floating bubble.
    */
   const [transcription, setTranscription] = useState("");
-  
+
+  /**
+   * State: showSettings
+   * Controls visibility of the settings panel.
+   */
+  const [showSettings, setShowSettings] = useState(false);
+
+  /**
+   * State: showCopiedNotification
+   * Shows a brief notification when auto-copy completes.
+   */
+  const [showCopiedNotification, setShowCopiedNotification] = useState(false);
+
+  /**
+   * Refs for silence detection
+   */
+  const silenceTimerRef = useRef<number | null>(null);
+  const lastTranscriptRef = useRef("");
+  const isRecordingRef = useRef(false);
+
+  /**
+   * Hook: useSettings
+   * Manages app configuration with persistence.
+   */
+  const { settings, updateSettings } = useSettings();
+
   /**
    * Hook Initialization: useDeepgram
-   * We pass the API key from environment variables.
-   * Destructures methods to manage connection and data flow.
+   * Passes the API key from environment variables.
    */
-  const { 
-    connectToDeepgram, 
-    disconnectFromDeepgram, 
-    connectionState, 
-    realtimeTranscript, 
+  const {
+    connectToDeepgram,
+    disconnectFromDeepgram,
+    resetTranscript,
+    connectionState,
+    realtimeTranscript,
     sendAudio,
-    error: deepgramError 
+    error: deepgramError,
   } = useDeepgram(import.meta.env.VITE_DEEPGRAM_API_KEY || "");
 
   /**
-   * Effect: Sync Transcription
-   * Updates the local state whenever the Deepgram hook provides new text.
-   */
-  useEffect(() => {
-    setTranscription(realtimeTranscript);
-  }, [realtimeTranscript]);
-
-  /**
    * Callback: handleAudioData
-   * Responsibility: Receives raw audio chunks from the microphone.
-   * Action: Forwards the data immediately to the Deepgram WebSocket.
+   * Receives raw audio chunks from the microphone.
    */
-  const handleAudioData = useCallback((data: Blob) => {
-    sendAudio(data);
-  }, [sendAudio]);
+  const handleAudioData = useCallback(
+    (data: Blob) => {
+      sendAudio(data);
+    },
+    [sendAudio]
+  );
 
   /**
    * Hook Initialization: useAudioRecorder
    * Manages the actual microphone hardware.
-   * We pass 'handleAudioData' so it knows where to send the chunks.
    */
-  const { startRecording, stopRecording, isRecording, error: recorderError } = useAudioRecorder(handleAudioData);
+  const {
+    startRecording,
+    stopRecording,
+    isRecording,
+    error: recorderError,
+  } = useAudioRecorder(handleAudioData);
+
+  /**
+   * Function: clearSilenceTimer
+   */
+  const clearSilenceTimer = () => {
+    if (silenceTimerRef.current) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  };
+
+  /**
+   * Function: stopRecordingAndCopy
+   * Stops recording and handles auto copy.
+   */
+  const stopRecordingAndCopy = useCallback(async () => {
+    if (!isRecordingRef.current) return;
+    
+    clearSilenceTimer();
+    isRecordingRef.current = false;
+    
+    const finalTranscript = lastTranscriptRef.current;
+    
+    stopRecording();
+    disconnectFromDeepgram();
+
+    // Auto copy if enabled and there's text
+    if (settings.autoCopyPaste && finalTranscript) {
+      try {
+        await writeText(finalTranscript);
+        // Show notification
+        setShowCopiedNotification(true);
+        setTimeout(() => setShowCopiedNotification(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy:", err);
+      }
+    }
+  }, [settings.autoCopyPaste, stopRecording, disconnectFromDeepgram]);
+
+  /**
+   * Effect: Sync Transcription and handle silence detection
+   */
+  useEffect(() => {
+    setTranscription(realtimeTranscript);
+    lastTranscriptRef.current = realtimeTranscript;
+
+    if (!isRecordingRef.current || settings.silenceTimeout <= 0) return;
+
+    clearSilenceTimer();
+
+    silenceTimerRef.current = window.setTimeout(() => {
+      if (isRecordingRef.current && lastTranscriptRef.current) {
+        stopRecordingAndCopy();
+      }
+    }, settings.silenceTimeout * 1000);
+
+  }, [realtimeTranscript, settings.silenceTimeout, stopRecordingAndCopy]);
 
   /**
    * Handler: toggleRecording
-   * Responsibility: Orchestrates the start/stop workflow.
-   * Flow:
-   * - If Recording: Stop microphone -> Disconnect WebSocket.
-   * - If Stopped: Connect WebSocket -> Start microphone -> Clear old text.
+   * Orchestrates the start/stop workflow.
    */
   const toggleRecording = async () => {
     if (isRecording) {
-      stopRecording();
-      disconnectFromDeepgram();
+      await stopRecordingAndCopy();
     } else {
+      setShowSettings(false);
+      resetTranscript();
+      setTranscription("");
+      lastTranscriptRef.current = "";
+      
+      isRecordingRef.current = true;
       await connectToDeepgram();
       await startRecording();
-      // Clear previous text when starting a new session.
-      setTranscription(""); 
     }
   };
 
   /**
-   * Helper: getIndicatorColor
-   * Returns Tailwind class names for the status dot based on connection state.
+   * Handler: clearTranscription
+   * Resets the transcription state.
    */
-  const getIndicatorColor = () => {
-    switch (connectionState) {
-      case "connected": return "bg-green-500";
-      case "connecting": return "bg-yellow-500";
-      case "error": return "bg-red-500";
-      default: return "bg-slate-300";
-    }
+  const clearTranscription = () => {
+    setTranscription("");
+    resetTranscript();
+    lastTranscriptRef.current = "";
   };
 
-  // Combine errors from both hooks to show a unified error banner
+  /**
+   * Hook: useGlobalShortcut
+   * Listens for keyboard shortcut to toggle recording.
+   */
+  const {
+    currentShortcut,
+    isListeningForShortcut,
+    startListeningForShortcut,
+    stopListeningForShortcut,
+  } = useGlobalShortcut(
+    settings.shortcut,
+    toggleRecording,
+    settings.shortcutEnabled && !showSettings,
+    (newShortcut) => updateSettings({ shortcut: newShortcut })
+  );
+
+  /**
+   * Effect: Cleanup on unmount
+   */
+  useEffect(() => {
+    return () => clearSilenceTimer();
+  }, []);
+
   const activeError = recorderError || deepgramError;
 
   return (
-    <div className="h-screen w-screen bg-slate-50 flex flex-col items-center text-slate-900">
-      {/* Header*/}
-      <header className="w-full p-4 border-b border-slate-200 bg-white/50 backdrop-blur-sm fixed top-0 z-10">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Wispr Flow
-          </h1>
-          <div className="flex items-center gap-3">
-            {/* Connection Status Badge*/}
-            <div className="flex items-center gap-2 text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
-              <div className={`w-2 h-2 rounded-full ${getIndicatorColor()}`} />
-              {connectionState === "closed" ? "Ready" : connectionState}
-            </div>
-            <div className="text-xs font-mono text-slate-400">v0.1.0</div>
-          </div>
-        </div>
-      </header>
-
-      {/* Error Banner*/}
-      {activeError && (
-        <div className="absolute top-20 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded z-50">
-          {activeError}
-        </div>
-      )}
-
-      {/* Main View*/}
-      <main className="flex-1 w-full flex flex-col items-center pt-16 pb-0">
-        <TranscriptionView 
-          text={transcription} 
-          isRecording={isRecording} 
-        />
-      </main>
-
-      <Controls 
-        isRecording={isRecording} 
-        onToggleRecording={toggleRecording} 
+    <>
+      <FloatingWidget
+        transcription={transcription}
+        isRecording={isRecording}
+        connectionState={connectionState}
+        error={activeError}
+        onToggleRecording={toggleRecording}
+        onClearTranscription={clearTranscription}
+        onOpenSettings={() => setShowSettings(true)}
+        autoCopyEnabled={settings.autoCopyPaste}
+        showCopiedNotification={showCopiedNotification}
       />
-    </div>
+
+      {showSettings && (
+        <Settings
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          onClose={() => {
+            stopListeningForShortcut();
+            setShowSettings(false);
+          }}
+          isRecordingShortcut={isListeningForShortcut}
+          onStartRecordingShortcut={startListeningForShortcut}
+          currentShortcut={currentShortcut}
+        />
+      )}
+    </>
   );
 }
 
