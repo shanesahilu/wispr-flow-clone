@@ -65,8 +65,8 @@ Instead of the traditional "record → upload → wait" REST API approach, I imp
 └─────────────┘                    └──────────────┘                 │   Nova-2     │
                                                                     └──────┬───────┘
                                                                            │
-┌─────────────┐    setState()      ┌──────────────┐    JSON msgs    │
-│     UI      │ ◄───────────────── │  useDeepgram │ ◄──────────────┘
+┌─────────────┐    setState()      ┌──────────────┐    JSON msgs           │
+│     UI      │ ◄───────────────── │  useDeepgram │ ◄───────────────────────
 └─────────────┘                    └──────────────┘
 ```
 
@@ -311,13 +311,6 @@ The following assumptions were made during development:
 2. Look for the app in the taskbar/dock
 3. Try restarting the application
 
----
-
-## License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
 
 ## Acknowledgments
 
