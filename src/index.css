@@ -365,8 +365,8 @@ body {
  */
 .settings-panel {
   position: fixed;
-  top: 10px;
-  bottom: 5px;
+  top: 1px;
+  bottom: 1px;
   left: 50%;
   transform: translateX(-50%);
   width: 340px;

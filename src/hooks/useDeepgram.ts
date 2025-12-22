@@ -18,6 +18,7 @@ interface UseDeepgramReturn {
   realtimeTranscript: string;
   sendAudio: (data: Blob) => void;
   error: string | null;
+  lastSpeechTime: number;
 }
 
 /**
@@ -44,6 +45,13 @@ export function useDeepgram(apiKey: string): UseDeepgramReturn {
    * Stores any error messages related to the WebSocket connection.
    */
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * State: lastSpeechTime
+   * Tracks when we last received any speech (interim or final).
+   * Used for accurate silence detection.
+   */
+  const [lastSpeechTime, setLastSpeechTime] = useState<number>(Date.now());
 
   /**
    * Ref: socketRef
@@ -94,6 +102,13 @@ export function useDeepgram(apiKey: string): UseDeepgramReturn {
           // Check if the message contains a valid transcript
           if (data.channel?.alternatives?.[0]?.transcript) {
             const transcript = data.channel.alternatives[0].transcript;
+            
+            // Update last speech time on ANY transcript (interim or final)
+            // This is key for accurate silence detection
+            if (transcript.trim()) {
+              setLastSpeechTime(Date.now());
+            }
+            
             // Only append if it's a "final" result (not interim/partial)
             if (data.is_final) {
               setRealtimeTranscript((prev) => prev + (prev ? " " : "") + transcript);
@@ -162,6 +177,7 @@ export function useDeepgram(apiKey: string): UseDeepgramReturn {
    */
   const resetTranscript = useCallback(() => {
     setRealtimeTranscript("");
+    setLastSpeechTime(Date.now());
   }, []);
 
   return {
@@ -172,5 +188,6 @@ export function useDeepgram(apiKey: string): UseDeepgramReturn {
     realtimeTranscript,
     sendAudio,
     error,
+    lastSpeechTime,
   };
 }

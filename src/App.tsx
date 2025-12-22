@@ -51,6 +51,7 @@ function App() {
     realtimeTranscript,
     sendAudio,
     error: deepgramError,
+    lastSpeechTime,
   } = useDeepgram(import.meta.env.VITE_DEEPGRAM_API_KEY || "");
 
   /**
@@ -80,7 +81,7 @@ function App() {
    */
   const clearSilenceTimer = () => {
     if (silenceTimerRef.current) {
-      window.clearTimeout(silenceTimerRef.current);
+      window.clearInterval(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
   };
@@ -114,23 +115,37 @@ function App() {
   }, [settings.autoCopyPaste, stopRecording, disconnectFromDeepgram]);
 
   /**
-   * Effect: Sync Transcription and handle silence detection
+   * Effect: Sync Transcription
    */
   useEffect(() => {
     setTranscription(realtimeTranscript);
     lastTranscriptRef.current = realtimeTranscript;
+  }, [realtimeTranscript]);
 
+  /**
+   * Effect: Silence detection based on actual speech activity
+   * Uses lastSpeechTime from Deepgram (updated on any transcript, including interim)
+   */
+  useEffect(() => {
     if (!isRecordingRef.current || settings.silenceTimeout <= 0) return;
 
     clearSilenceTimer();
 
-    silenceTimerRef.current = window.setTimeout(() => {
-      if (isRecordingRef.current && lastTranscriptRef.current) {
+    // Check periodically if silence threshold has been exceeded
+    const checkSilence = () => {
+      if (!isRecordingRef.current || !lastTranscriptRef.current) return;
+      
+      const timeSinceLastSpeech = Date.now() - lastSpeechTime;
+      if (timeSinceLastSpeech >= settings.silenceTimeout * 1000) {
         stopRecordingAndCopy();
       }
-    }, settings.silenceTimeout * 1000);
+    };
 
-  }, [realtimeTranscript, settings.silenceTimeout, stopRecordingAndCopy]);
+    // Poll every 500ms to check silence duration
+    silenceTimerRef.current = window.setInterval(checkSilence, 500);
+
+    return () => clearSilenceTimer();
+  }, [lastSpeechTime, settings.silenceTimeout, stopRecordingAndCopy]);
 
   /**
    * Handler: toggleRecording
